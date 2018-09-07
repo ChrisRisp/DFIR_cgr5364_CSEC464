@@ -51,6 +51,7 @@ function Get-Spec{
 
 }
 
+# Collect Storage info
 function Get-Storage{
     $obj = @{}
 
@@ -60,16 +61,18 @@ function Get-Storage{
     $Disks | Export-Csv -NoTypeInformation -Path "disks.csv" -Delimiter ","
 }
 
+# Collect Active Directory Info
 function Get-AD{
     $obj = @{}
 
     $Domain = (Get-WmiObject win32_computersystem).Domain
-    #$obj.DomainController = Get-ADDomainController -Discover -Domain $Domain
+    $obj.DomainController = Get-ADDomainController -Discover -Domain $Domain
 
     $obj | Format-Table
     $obj | Export-Csv -NoTypeInformation -Path "ad.csv" -Delimiter ","
 }
 
+# Collect Hostname info
 function Get-Host{
     $obj = @{}
 
@@ -81,6 +84,7 @@ function Get-Host{
     $obj | Export-Csv -NoTypeInformation -Path "host.csv" -Delimiter ","
 }
 
+# Collect Users info
 function Get-Users{
     $obj = @{}
     $users = Get-WmiObject -Class Win32_UserAccount
@@ -93,6 +97,7 @@ function Get-Users{
     $users | Export-Csv -NoTypeInformation -Path "users.csv" -Delimiter ","
 }
 
+# Collect Networking info
 function Get-Networking{
     $obj = @{}
     $obj.Interfaces = Get-NetAdapter | Select-Object Name, InterfaceDescription, MacAddress
@@ -107,9 +112,7 @@ function Get-Networking{
 
     $UDPEndpoints = Get-NetUDPEndpoint
     $obj.UDPEndpoints = $UDPEndpoints
-  
     $obj.DNSCache = Get-DnsClientCache
-
     $obj.ARP_Table | Format-Table
     $obj.Interfaces | Format-Table
     $obj.AdvancedInfo | Format-Table
@@ -130,6 +133,7 @@ function Get-Networking{
 
 }
 
+# Collect Process List
 function Get-Processes{
     $obj = @{}
     $obj.List = Get-WmiObject Win32_Process | Select-Object ProcessName,ProcessID,ParentProcessID
@@ -142,6 +146,7 @@ function Get-Processes{
     $obj.Path | Export-Csv -NoTypeInformation -Path installedpath.csv
 }
 
+# Collect Driver Info
 function Get-Drivers{
     $obj = @{}
     $obj.List = Get-WindowsDriver -Online -All | Select-Object Driver, BootCritical, OriginalFileName, Version, Date, ProviderName
@@ -152,6 +157,7 @@ function Get-Drivers{
 
 }
 
+# Collect Installed Software
 function Get-Software{
     $obj = @{}
     $sw = Get-WmiObject -Class Win32_Product
@@ -160,6 +166,8 @@ function Get-Software{
 
 }
 
+
+# Collect User File Lise
 function Get-UserFiles{
     $obj = @{}
 
@@ -181,17 +189,6 @@ function Get-UserFiles{
   
 }
 
-function Write-Csv{
-    $currtime = (Get-Date).toString()
-    $timezone = Get-TimeZone | select StandardName
-    $uptime = Get-CimInstance -ClassName win32_operatingsystem | select csname, lastbootuptime
-    
-    Write-Host $timezone
-    Write-Host $uptime
-    Write-Host $currtime
-}
-
-
 # Combine CSVs for Email
 function Concat-Csv{
     Set-Location $pwd
@@ -203,6 +200,22 @@ function Concat-Csv{
 
 # Main Function
 function Collect-Artifacts{
+
+    
+    Write-Host "Notice: Do you want to send the information collected in an email?"
+    $answer = Read-Host '[y/n] '
+    if ($answer -eq 'y'){
+        Set-Location $pwd
+        $From = Read-Host 'Please Enter Sending Email: Example@gmail.com'
+        $To = Read-Host 'Please Enter Receiver Email: Example@gmail.com'
+        $Cc = Read-Host 'Please Enter CC Email if Applicable: Example@gmail.com'
+        $Attachment = "$pwd/artifacts"
+        $Subject = "Artifact CSV"
+        $Body = "Attached is concatenated Artifacts CSV File"
+        $SMTPServer = "smtp.gmail.com"
+        $SMTPPort = "587"
+    } 
+
     Write-Host ":::::::::::::::::::::::::: Collecting Time ::::::::::::::::::::::::::"
     Get-Time
     
@@ -214,7 +227,9 @@ function Collect-Artifacts{
     
     Write-Host ":::::::::::::::::::::::: Collecting Storage Specs :::::::::::::::::::"
     Get-Storage
-    #Get-AD
+
+    Write-Host "::::::::::::::::::: Collecting Active Directory Info ::::::::::::::::"
+    Get-AD
     
     Write-Host ":::::::::::::::::::::::: Collecting FQDN Info :::::::::::::::::::::::"
     Get-Host
@@ -238,6 +253,10 @@ function Collect-Artifacts{
     Get-UserFiles
 
     Concat-Csv
+
+    Send-MailMessage -From $From -to $To -Cc $Cc -Subject $Subject -Body $Body -SmtpServer $SMTPServer -port $SMTPPort -UseSsl -Credential (Get-Credential) -Attachments $Attachment –DeliveryNotificationOption OnSuccess
+
+
 }
 
 Collect-Artifacts
