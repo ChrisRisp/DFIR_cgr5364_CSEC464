@@ -254,8 +254,9 @@ function Collect-Artifacts{
 
     Concat-Csv
 
+     if ($answer -eq 'y'){ 
     Send-MailMessage -From $From -to $To -Cc $Cc -Subject $Subject -Body $Body -SmtpServer $SMTPServer -port $SMTPPort -UseSsl -Credential (Get-Credential) -Attachments $Attachment –DeliveryNotificationOption OnSuccess
-
+     }
 
 }
 
