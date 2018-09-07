@@ -110,19 +110,25 @@ processes=$(ps -aux)
 printf "Processes\n--------\n%s\n\n" "$processes"
 
 #### Loop Documents and Directories ####
-for D in /home; do
-	if [ -d "$D" ];
-	then
-		for i in /home/$D
-		do
-			if [ $i == 'Documents' ]; 
-			then
-				ls /home/$D/$i
-			fi
-			if [ $i == 'Downloads' ]; 
-			then
-				ls /home/$D/$i
-			fi
-		done
-	fi
+for D in /home/*; do
+        echo $D
+        for I in $D/*; do
+                targ=$(basename $I)
+                if [ "$targ" == "Documents" ];
+                then
+                        printf "################## Contents of Documents ##########"
+                        ls $I
+                fi
+
+                if [ "$targ" == "Downloads" ];
+                then
+                        printf "################## Contents of Downloads ##########"
+                        ls $I
+                fi
+        done
 done
+
+
+#### Send EMail
+echo "Attached are the artifacts" | mail -s "Artifacts Found" user@gmail.com -A artifacts
+
